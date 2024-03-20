@@ -4,10 +4,14 @@ const bcrypt = require("bcrypt");
 exports.registerUser = async (req, res, next) => {
   try {
     const user = new User(req.body);
+    const useremail = await User.findOne({email:req.body.email});
+    if (useremail) {
+      return res.json({ success: false, error: "Email already exist" });
+    }
     const createUser = await user.save();
     res.status(201).json({success:true, createUser });
   } catch (e) {
-    res.status(400).json(e);
+    res.status(400).json({success:false,error:e.message});
   }
 };
 
