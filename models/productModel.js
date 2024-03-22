@@ -11,11 +11,11 @@ const productSchema = new mongoose.Schema({
    createAt:
    {
       type:Date,
-      default:Date.now()
+      default:Date.now
    },
    updatedAt:{
       type:Date,
-      default:Date.now()
+      default:Date.now
    },
    images: [String] ,
    isDeleted:
