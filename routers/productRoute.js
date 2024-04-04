@@ -8,7 +8,9 @@ const {
   updateProduct,
   deleteProduct,
   checkProductExists,
-  getAdminProducts
+  getAdminProducts,
+  getDeletedProducts,
+  updateDeletedProduct
 } = require("../controller/productController");
 const { isAuthenticatedUser } = require("../middleware/auth");
 
@@ -27,9 +29,11 @@ router.get("/products", getAllProducts);
 router.get("/product/:id", getproductDetails);
 
 //Admin
-router.get("/admin/products",getAdminProducts)
-router.post("/admin/product/new", upload.array("images", 5), addProduct);
-router.put("/admin/product/:id",checkProductExists,upload.array("images", 5),updateProduct);
-router.delete("/admin/product/:id", deleteProduct);
+router.get("/admin/products",isAuthenticatedUser,getAdminProducts)
+router.get("/admin/deletedProducts",isAuthenticatedUser,getDeletedProducts)
+router.post("/admin/product/new",isAuthenticatedUser,upload.array("images", 5), addProduct);
+router.put("/admin/product/:id",isAuthenticatedUser,checkProductExists,upload.array("images", 5),updateProduct);
+router.delete("/admin/product/:id",isAuthenticatedUser, deleteProduct);
+router.put("/admin/productStatus/:id",isAuthenticatedUser,updateDeletedProduct)
 
 module.exports = router;
