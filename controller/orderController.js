@@ -34,6 +34,12 @@ exports.newOrder = async (req, res, next) => {
     }
 
     const order = await Order.create(orderData);
+
+    // Update stock for each ordered item
+    for (const item of orderItems) {
+      await updateStock(item.product, item.quantity);
+    }
+
     res.status(201).json({
       success: true,
       order,
@@ -46,10 +52,18 @@ exports.newOrder = async (req, res, next) => {
   }
 };
 
+
 //get my orders(logged in users)
 exports.myOrders = async(req,res,next)=>
 {
-  const orders = await Order.find({ user: req.user._id });
+  const orders = await Order.find({ user: req.user._id })
+  // .populate({
+  //   path: "orderItems",
+  //   populate: {
+  //     path: "product",
+  //     select: "name price images",
+  //   },
+  // });
 
   res.status(200).json({
     success: true,
@@ -59,10 +73,14 @@ exports.myOrders = async(req,res,next)=>
 
 //get single order
 exports.getSingleOrder =async (req, res, next) => {
-  try{  const order = await Order.findById(req.params.id).populate(
-    "user",
-    "name email"
-  );
+  try{  const order = await Order.findById(req.params.id).populate("user", "name email")
+  // .populate({
+  //   path: "orderItems",
+  //   populate: {
+  //     path: "product",
+  //     select: "name price images",
+  //   },
+  // });
 
   if (!order) {
     return res.json({success:false,error:"Order not found with this Id"});
@@ -82,6 +100,16 @@ catch(e)
 //get All Orders(Admin)
 exports.getAllOrders =async (req, res, next) => {
   const orders = await Order.find({isDeleted:false});
+
+  res.status(200).json({
+    success: true,
+    orders,
+  });
+};
+
+//get deleted order(Admin)
+exports.getDeletedOrders =async (req, res, next) => {
+  const orders = await Order.find({isDeleted:true});
 
   res.status(200).json({
     success: true,
@@ -116,18 +144,13 @@ exports.updateOrder = async (req, res, next) => {
     return res.json({success:false,error:"Order not found with this Id"});
   }
 
-  if (order.orderStatus === "Delivered") {
+  if (order.deliveryStatus === "Delivered") {
     return res.json({success:false,error:"You have already delivered this order"});
   }
 
-  if (req.body.orderStatus === "Shipped") {
-    order.orderItems.forEach(async (o) => {
-      await updateStock(o.product, o.quantity);
-    });
-  }
-  order.orderStatus = req.body.orderStatus;
+  order.deliveryStatus = req.body.deliveryStatus;
 
-  if (req.body.orderStatus === "Delivered") {
+  if (req.body.deliveryStatus === "Delivered") {
     order.deliveredAt = Date.now();
     if (order.paymentInfo.mode === "COD")
     {
