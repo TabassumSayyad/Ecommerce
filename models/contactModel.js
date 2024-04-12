@@ -30,6 +30,10 @@ const contactSchema = new mongoose.Schema({
       query: {
         type: String,
         required: true
+      },
+      repliedStatus:{
+        type:Boolean,
+        default:false
       }
 })
 

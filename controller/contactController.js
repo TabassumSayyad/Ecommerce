@@ -21,3 +21,21 @@ exports.getAllContacts= async(req,res,next)=>
         res.status(400).json({ success: false, e });
       }
 }
+
+//update replied status(no -> yes)
+exports.updateStatus = async(req,res,next)=>
+{
+  try{
+    const updateContactStatus = await Contact.findByIdAndUpdate(
+      req.params.id,
+      { repliedStatus: true },
+      { new: true }
+    );
+    if (!updateContactStatus) {
+      return res.json({ success: false, error: "Contact not found" });
+    }
+    res.json({ success: true, updateContactStatus });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}
