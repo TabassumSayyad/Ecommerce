@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
   shippingInfo: {
-    hounseNo:{
+    houseNo:{
         type: String,
         required: true,
     },
