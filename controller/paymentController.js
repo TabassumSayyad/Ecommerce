@@ -2,8 +2,9 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.processPayment = async (req, res, next) => {
   try{
-  const { product } = req.body;
-  const lineItems = product.map((product) => ({
+  const { products } = req.body;
+  console.log(products)
+  const lineItems = products.map((product) => ({
     price_data:{
         currency:"inr",
         product_data:{
