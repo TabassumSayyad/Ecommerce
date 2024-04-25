@@ -74,7 +74,6 @@ const orderSchema = new mongoose.Schema({
   paymentInfo: {
     id: {
       type: String,
-      required: true,
     },
     mode: {
       type: String,
