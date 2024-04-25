@@ -130,7 +130,9 @@ exports.newOrder = async (req, res, next) => {
 
 //get my orders(logged in users)
 exports.myOrders = async (req, res, next) => {
-  const orders = await Order.find({ user: req.user._id });
+  const orders = await Order.find({ user: req.user._id }).sort({
+    createdAt: -1,
+  });
 
   res.status(200).json({
     success: true,
@@ -163,7 +165,9 @@ exports.getSingleOrder = async (req, res, next) => {
 
 //get All Orders(Admin)
 exports.getAllOrders = async (req, res, next) => {
-  const orders = await Order.find({ isDeleted: false });
+  const orders = await Order.find({ isDeleted: false }).sort({
+    createdAt: -1,
+  });
 
   res.status(200).json({
     success: true,
