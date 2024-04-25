@@ -20,7 +20,7 @@ exports.registerUser = async (req, res, next) => {
 //Login User
 exports.loginUser = async (req, res) => {
   try {
-    console.log(req.body);
+    // console.log(req.body);
     const { email, password } = req.body;
     if (!email || !password) {
       return res.json({ success: false, error: "Email and Password Required" });
@@ -32,12 +32,12 @@ exports.loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, useremail.password);
 
     const token = await useremail.generateJWTToken();
-    // console.log(token);
     if (isMatch) {
+      // console.log(process.env.JWT_EXPIRE)
       return res
         .status(201)
         .cookie("token", token, {
-          expires: new Date(Date.now() + 1000000),
+          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
           httpOnly: true,
         })
         .json({ success: true, user: useremail, token: token });
@@ -120,7 +120,7 @@ exports.forgotPassword = async (req, res, next) => {
       <p>If you did not make this request, you can ignore this email.</p>
       <p>To reset your password, click the following link or copy and paste it into your browser</p>
       <p><a href="${resetPasswordUrl}" class="reset-link" target="_blank">${resetPasswordUrl}</a></p>
-      <p>This link will expire in 10mins for security reasons.</p>
+      <p>This link will expire in 10 mins for security reasons.</p>
       <div class="footer">
         <p>Thank you,</p>
         <p>The Kharido Yaar Team</p>
