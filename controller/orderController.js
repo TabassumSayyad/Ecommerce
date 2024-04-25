@@ -16,6 +16,7 @@ exports.newOrder = async (req, res, next) => {
 
   try {
     // Create the order object
+    // Create the order object
     const orderData = {
       shippingInfo,
       orderItems,
@@ -30,16 +31,76 @@ exports.newOrder = async (req, res, next) => {
 
     if (paymentInfo.mode === "COD") {
       orderData.paidAt = undefined; // If payment mode is COD, leave paidAt undefined
+      paymentInfo.id = undefined;
     } else {
       orderData.paidAt = new Date(); // If payment mode is not COD, set paidAt to current date
     }
 
     const order = await Order.create(orderData);
+    // console.log(order);
 
     // Update stock for each ordered item
     for (const item of orderItems) {
       await updateStock(item.product, item.quantity);
     }
+    // Send confirmation email to the user
+    const confirmationMessage = `
+    <html>
+    <head>
+      <style>
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+          font-family: Arial, sans-serif;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+    
+        .header {
+          background-color: #f0f0f0;
+          padding: 10px;
+          border-bottom: 1px solid #ccc;
+        }
+    
+        h2 {
+          margin: 0;
+        }
+    
+        .footer {
+          margin-top: 20px;
+          border-top: 1px solid #ccc;
+          padding-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>Order Confirmation</h2>
+        </div>
+        <p>Dear ${req.user.name},</p>
+        <p>Thank you for placing your order with us.</p>
+        <p>Your order has been confirmed, and we're delighted to serve you.</p>
+        <p>Order Id:${order._id}
+        <p>We'll keep you updated throughout the process, and once your order is shipped, we'll be in touch with you promptly.</p>
+        <p>For more details regarding your order, please visit the 'My Orders' section on our website.</p>
+        <p>Thank you for choosing us. We appreciate your trust and look forward to delivering an exceptional experience.</p>
+        <div class="footer">
+          <p>Best Regards,</p>
+          <p>The Kharido Yaar Team</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    await sendEmail({
+      email: req.user.email,
+      subject: "Order Confirmation",
+      message: confirmationMessage,
+      contentType: "text/html",
+    });
 
     res.status(201).json({
       success: true,
@@ -173,7 +234,7 @@ exports.updateOrder = async (req, res, next) => {
             <h2>Order Status</h2>
           </div>
           <p>Hello ${order.user.name},</p>
-          <p>We are thrilled to inform you that your recent order has been successfully Shipped!</p>
+          <p>We are thrilled to inform you that your recent order (Order ID:${order._id}) has been successfully Shipped!</p>
           <p>Your eagerly anticipated order is en route and scheduled to arrive at your doorstep within the next 24 hours.</p>
           <div class="footer">
             <p>Thank you,</p>
@@ -194,7 +255,7 @@ exports.updateOrder = async (req, res, next) => {
             <h2>Order Status</h2>
           </div>
           <p>Hello ${order.user.name},</p>
-          <p>We are pleased to inform you that your recent order has been successfully Delivered!</p>
+          <p>We are pleased to inform you that your recent order (Order ID:${order._id}) has been successfully Delivered!</p>
           <p>Thank you for choosing Kharido Yaar.</p>
           <div class="footer">
             <p>Thank you,</p>
