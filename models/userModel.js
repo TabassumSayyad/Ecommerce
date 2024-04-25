@@ -60,7 +60,6 @@ userSchema.pre("save", async function () {
 
 //JWT Token
 userSchema.methods.generateJWTToken = function () {
-  // console.log(process.env.JWT_SECRET);
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET);
 };
 
@@ -74,8 +73,6 @@ userSchema.methods.getResetPasswordToken = function () {
     .digest("hex");
 
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-  // console.log(resetToken,this.resetPasswordToken);
-
   return resetToken;
 };
 

@@ -2,17 +2,17 @@ const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
   shippingInfo: {
-    houseNo:{
-        type: String,
-        required: true,
+    houseNo: {
+      type: String,
+      required: true,
     },
-    appartmentName:{
-        type: String,
-        required: true,
+    appartmentName: {
+      type: String,
+      required: true,
     },
-    landmark:{
-        type: String,
-        required: true,
+    landmark: {
+      type: String,
+      required: true,
     },
     city: {
       type: String,
@@ -36,10 +36,10 @@ const orderSchema = new mongoose.Schema({
       type: Number,
       required: true,
     },
-    alternatePhone:{
-        type: Number,
-        required: true,
-      },
+    alternatePhone: {
+      type: Number,
+      required: true,
+    },
   },
   orderItems: [
     {
@@ -81,7 +81,7 @@ const orderSchema = new mongoose.Schema({
     },
   },
   paidAt: {
-    type: Date
+    type: Date,
   },
   itemsPrice: {
     type: Number,
@@ -123,11 +123,10 @@ const orderSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  isDeleted:
-   {
-      type:Boolean,
-      default:false
-   }
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("Order", orderSchema);
