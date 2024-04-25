@@ -12,7 +12,7 @@ const {
   getDeletedProducts,
   updateDeletedProduct,
 } = require("../controller/productController");
-const { isAuthenticatedUser,authorizeRoles } = require("../middleware/auth");
+const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
