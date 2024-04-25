@@ -4,8 +4,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
-// require('dotenv').config({path:'./config/.env'});
-
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -26,29 +24,27 @@ const userSchema = new mongoose.Schema({
     type: Number,
     required: true,
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return /^[0-9]{10}$/.test(v);
       },
-      message:"Mobile no. must contain 10 digits"
-    }
+      message: "Mobile no. must contain 10 digits",
+    },
   },
   password: {
     type: String,
     required: true,
   },
-  role:{
-    type:String,
-    default:"user"
+  role: {
+    type: String,
+    default: "user",
   },
-  createdAt:
-  {
-    type:Date,
-    default:Date.now
+  createdAt: {
+    type: Date,
+    default: Date.now,
   },
-  updatedAt:
-  {
-    type:Date,
-    default:Date.now
+  updatedAt: {
+    type: Date,
+    default: Date.now,
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
@@ -62,12 +58,11 @@ userSchema.pre("save", async function () {
   }
 });
 
-
 //JWT Token
 userSchema.methods.generateJWTToken = function () {
   // console.log(process.env.JWT_SECRET);
-    return jwt.sign({ id: this._id }, process.env.JWT_SECRET);
-  };
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET);
+};
 
 // Generating Password Reset Token
 userSchema.methods.getResetPasswordToken = function () {
@@ -78,12 +73,11 @@ userSchema.methods.getResetPasswordToken = function () {
     .update(resetToken)
     .digest("hex");
 
-  this.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
   // console.log(resetToken,this.resetPasswordToken);
 
   return resetToken;
 };
 
 const User = new mongoose.model("User", userSchema);
-
 module.exports = User;
