@@ -10,9 +10,9 @@ const {
   checkProductExists,
   getAdminProducts,
   getDeletedProducts,
-  updateDeletedProduct
+  updateDeletedProduct,
 } = require("../controller/productController");
-const { isAuthenticatedUser } = require("../middleware/auth");
+const { isAuthenticatedUser,authorizeRoles } = require("../middleware/auth");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -29,11 +29,44 @@ router.get("/products", getAllProducts);
 router.get("/product/:id", getproductDetails);
 
 //Admin
-router.get("/admin/products",isAuthenticatedUser,authorizeRoles("admin"),getAdminProducts)
-router.get("/admin/deletedProducts",isAuthenticatedUser,authorizeRoles("admin"),getDeletedProducts)
-router.post("/admin/product/new",isAuthenticatedUser,authorizeRoles("admin"),upload.array("images", 5), addProduct);
-router.put("/admin/product/:id",isAuthenticatedUser,authorizeRoles("admin"),checkProductExists,upload.array("images", 5),updateProduct);
-router.delete("/admin/product/:id",isAuthenticatedUser,authorizeRoles("admin"), deleteProduct);
-router.put("/admin/productStatus/:id",isAuthenticatedUser,authorizeRoles("admin"),updateDeletedProduct)
+router.get(
+  "/admin/products",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  getAdminProducts
+);
+router.get(
+  "/admin/deletedProducts",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  getDeletedProducts
+);
+router.post(
+  "/admin/product/new",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  upload.array("images", 5),
+  addProduct
+);
+router.put(
+  "/admin/product/:id",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  checkProductExists,
+  upload.array("images", 5),
+  updateProduct
+);
+router.delete(
+  "/admin/product/:id",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  deleteProduct
+);
+router.put(
+  "/admin/productStatus/:id",
+  isAuthenticatedUser,
+  authorizeRoles("admin"),
+  updateDeletedProduct
+);
 
 module.exports = router;
