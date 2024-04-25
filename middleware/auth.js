@@ -4,7 +4,6 @@ const User = require("../models/userModel");
 exports.isAuthenticatedUser = async (req, res, next) => {
   try {
     const { token } = req.cookies;
-      console.log(token);
     if (!token) {
       return res.json({
         success: false,
@@ -12,21 +11,21 @@ exports.isAuthenticatedUser = async (req, res, next) => {
       });
     }
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log(decodedData)
     req.user = await User.findById(decodedData.id);
-    // console.log(req.user)
     next();
   } catch (e) {
     return res.json({ success: false, error: e.message });
   }
 };
 
-
 exports.authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.json({success:false,error:`Role: ${req.user.role} is not allowed to access this resouce `});
+      return res.json({
+        success: false,
+        error: `Role: ${req.user.role} is not allowed to access this resouce `,
+      });
     }
     next();
   };
-}
+};

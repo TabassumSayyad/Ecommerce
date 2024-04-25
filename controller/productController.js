@@ -10,17 +10,14 @@ exports.addProduct = async (req, res) => {
 
   try {
     const filenames = req.files.map((file) => file.path);
-
     // Check if the category exists
     let existingCategory = await Category.findOne({ category });
-
     // If the category exists, check if the subCategory already exists
     if (!existingCategory.subcategories.includes(subCategory)) {
       // If the subCategory doesn't exist, add it to the subcategories array
       existingCategory.subcategories.push(subCategory);
       await existingCategory.save();
     }
-    // Create the product
     const product = new Product({
       title,
       description,
@@ -34,9 +31,10 @@ exports.addProduct = async (req, res) => {
     const createProduct = await product.save();
     res.status(201).json({ success: true, createProduct });
   } catch (e) {
-    res.status(400).json({ success: false, error: e.message});
+    res.status(400).json({ success: false, error: e.message });
   }
 };
+
 //get All Products
 exports.getAllProducts = async (req, res, next) => {
   try {
@@ -45,7 +43,7 @@ exports.getAllProducts = async (req, res, next) => {
     const startIndex = (page - 1) * limit;
 
     // Construct the query object
-    let query = {isDeleted:false};
+    let query = { isDeleted: false };
 
     // Add category filter if provided in query parameters
     if (req.query.category) {
@@ -128,7 +126,7 @@ exports.getproductDetails = async (req, res) => {
 //get All Products(Admin)
 exports.getAdminProducts = async (req, res) => {
   try {
-    const productsData = await Product.find({ isDeleted: false }); 
+    const productsData = await Product.find({ isDeleted: false });
     res.status(201).json({ success: true, productsData });
   } catch (e) {
     res.status(400).json({ success: false, e });
@@ -136,15 +134,14 @@ exports.getAdminProducts = async (req, res) => {
 };
 
 //get Deleted Products(Admin)
-exports.getDeletedProducts = async(req,res)=>
-{
+exports.getDeletedProducts = async (req, res) => {
   try {
-    const productsData = await Product.find({ isDeleted: true }); 
+    const productsData = await Product.find({ isDeleted: true });
     res.status(201).json({ success: true, productsData });
   } catch (e) {
     res.status(400).json({ success: false, e });
   }
-}
+};
 
 //for updation check if product is already exists
 exports.checkProductExists = async (req, res, next) => {
@@ -155,7 +152,7 @@ exports.checkProductExists = async (req, res, next) => {
         .status(404)
         .json({ success: false, error: "Product not found" });
     }
-    next(); // Proceed to next middleware if product exists
+    next();
   } catch (e) {
     return res.status(500).json({ success: false, error: e.message });
   }
@@ -164,16 +161,15 @@ exports.checkProductExists = async (req, res, next) => {
 //update product(admin)
 exports.updateProduct = async (req, res) => {
   try {
-    // console.log(path.join(__dirname,'..'));
     const existingProduct = await Product.findById(req.params.id);
     const { subCategory, category } = req.body;
-   
+
     if (subCategory) {
       await Category.findOneAndUpdate(
         { category },
-        { $addToSet: { subcategories: subCategory } },
+        { $addToSet: { subcategories: subCategory } }
       );
-  }
+    }
     // Check if new images are uploaded
     if (req.files && req.files.length > 0) {
       // Delete old images
@@ -184,14 +180,10 @@ exports.updateProduct = async (req, res) => {
       // Save new image filenames
       const filenames = req.files.map((file) => file.path);
       req.body.images = filenames;
-    }
-    else {
+    } else {
       req.body.images = existingProduct.images;
     }
-    // Update updatedAt field
     req.body.updatedAt = Date.now();
-
-    // Update the product
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
