@@ -1,6 +1,7 @@
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
 const sendEmail = require("../utils/sendEmail");
+
 //create new Order
 exports.newOrder = async (req, res, next) => {
   const {
@@ -15,8 +16,6 @@ exports.newOrder = async (req, res, next) => {
   } = req.body;
 
   try {
-    // Create the order object
-    // Create the order object
     const orderData = {
       shippingInfo,
       orderItems,
@@ -37,8 +36,6 @@ exports.newOrder = async (req, res, next) => {
     }
 
     const order = await Order.create(orderData);
-    // console.log(order);
-
     // Update stock for each ordered item
     for (const item of orderItems) {
       await updateStock(item.product, item.quantity);
@@ -46,53 +43,70 @@ exports.newOrder = async (req, res, next) => {
     // Send confirmation email to the user
     const confirmationMessage = `
     <html>
-    <head>
-      <style>
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          font-family: Arial, sans-serif;
-          border: 1px solid #ccc;
-          border-radius: 5px;
-        }
-    
-        .header {
-          background-color: #f0f0f0;
-          padding: 10px;
-          border-bottom: 1px solid #ccc;
-        }
-    
-        h2 {
-          margin: 0;
-        }
-    
-        .footer {
-          margin-top: 20px;
-          border-top: 1px solid #ccc;
-          padding-top: 10px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2>Order Confirmation</h2>
-        </div>
-        <p>Dear ${req.user.name},</p>
-        <p>Thank you for placing your order with us.</p>
-        <p>Your order has been confirmed, and we're delighted to serve you.</p>
-        <p>Order Id:${order._id}
-        <p>We'll keep you updated throughout the process, and once your order is shipped, we'll be in touch with you promptly.</p>
-        <p>For more details regarding your order, please visit the 'My Orders' section on our website.</p>
-        <p>Thank you for choosing us. We appreciate your trust and look forward to delivering an exceptional experience.</p>
-        <div class="footer">
-          <p>Best Regards,</p>
-          <p>The Kharido Yaar Team</p>
-        </div>
-      </div>
-    </body>
-    </html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation</title>
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .header {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    h2 {
+      margin: 0;
+    }
+
+    .footer {
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      padding: 14px 20px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Order Confirmation</h2>
+    </div>
+    <p>Dear ${req.user.name},</p>
+    <p>Thank you for placing your order with us.</p>
+    <p>Your order has been confirmed, and we're delighted to serve you.</p>
+    <p>Order Id: ${order._id}</p>
+    <p>We'll keep you updated throughout the process, and once your order is shipped, we'll be in touch with you promptly.</p>
+    <p>For more details regarding your order, please visit the 'My Orders' section on our website.</p>
+    <a href="${process.env.URL}/userOrders" target="_blank" class="btn">My Orders</a>
+    <p>Thank you for choosing us. We appreciate your trust and look forward to delivering an exceptional experience.</p>
+    <div class="footer">
+      <p>Best Regards,</p>
+      <p>The Kharido Yaar Team</p>
+    </div>
+  </div>
+</body>
+</html>
     `;
 
     await sendEmail({
@@ -117,13 +131,6 @@ exports.newOrder = async (req, res, next) => {
 //get my orders(logged in users)
 exports.myOrders = async (req, res, next) => {
   const orders = await Order.find({ user: req.user._id });
-  // .populate({
-  //   path: "orderItems",
-  //   populate: {
-  //     path: "product",
-  //     select: "name price images",
-  //   },
-  // });
 
   res.status(200).json({
     success: true,
@@ -138,14 +145,6 @@ exports.getSingleOrder = async (req, res, next) => {
       "user",
       "name email"
     );
-    // .populate({
-    //   path: "orderItems",
-    //   populate: {
-    //     path: "product",
-    //     select: "name price images",
-    //   },
-    // });
-
     if (!order) {
       return res.json({
         success: false,
@@ -214,7 +213,6 @@ exports.updateOrder = async (req, res, next) => {
         error: "Order not found with this Id",
       });
     }
-    console.log(order.user.email);
     if (order.deliveryStatus === "Delivered") {
       return res.json({
         success: false,
@@ -227,6 +225,41 @@ exports.updateOrder = async (req, res, next) => {
       message = `
       <html>
       <head>
+      <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .footer {
+        margin-top: 20px;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #007bff; 
+        color: white;
+        padding: 14px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+      }
+    </style>
       </head>
       <body>
         <div class="container">
@@ -236,6 +269,8 @@ exports.updateOrder = async (req, res, next) => {
           <p>Hello ${order.user.name},</p>
           <p>We are thrilled to inform you that your recent order (Order ID:${order._id}) has been successfully Shipped!</p>
           <p>Your eagerly anticipated order is en route and scheduled to arrive at your doorstep within the next 24 hours.</p>
+          <p>Check 'My Orders' section on our website</p>
+          <a href="${process.env.URL}/userOrders" target="_blank" class="btn">My Orders</a>
           <div class="footer">
             <p>Thank you,</p>
             <p>The Kharido Yaar Team</p>
@@ -248,6 +283,41 @@ exports.updateOrder = async (req, res, next) => {
       message = `
       <html>
       <head>
+      <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .footer {
+        margin-top: 20px;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #007bff; 
+        color: white;
+        padding: 14px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+      }
+    </style>
       </head>
       <body>
         <div class="container">
@@ -255,7 +325,9 @@ exports.updateOrder = async (req, res, next) => {
             <h2>Order Status</h2>
           </div>
           <p>Hello ${order.user.name},</p>
-          <p>We are pleased to inform you that your recent order (Order ID:${order._id}) has been successfully Delivered!</p>
+          <p>We are pleased to inform you that your recent order (Order ID:${order._id}) has been successfully ,Delivered!</p>
+          <p>Check 'My Orders' section on our website</p>
+          <a href="${process.env.URL}/userOrders" target="_blank" class="btn">My Orders</a>
           <p>Thank you for choosing Kharido Yaar.</p>
           <div class="footer">
             <p>Thank you,</p>

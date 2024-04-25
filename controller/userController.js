@@ -20,7 +20,6 @@ exports.registerUser = async (req, res, next) => {
 //Login User
 exports.loginUser = async (req, res) => {
   try {
-    // console.log(req.body);
     const { email, password } = req.body;
     if (!email || !password) {
       return res.json({ success: false, error: "Email and Password Required" });
@@ -33,7 +32,6 @@ exports.loginUser = async (req, res) => {
 
     const token = await useremail.generateJWTToken();
     if (isMatch) {
-      // console.log(process.env.JWT_EXPIRE)
       return res
         .status(201)
         .cookie("token", token, {
@@ -50,8 +48,7 @@ exports.loginUser = async (req, res) => {
 };
 
 //logout User
-exports.logout = async(req,res)=>
-{
+exports.logout = async (req, res) => {
   res.cookie("token", null, {
     expires: new Date(Date.now()),
     httpOnly: true,
@@ -61,7 +58,7 @@ exports.logout = async(req,res)=>
     success: true,
     message: "Logged Out",
   });
-}
+};
 
 //Forgot Password
 exports.forgotPassword = async (req, res, next) => {
@@ -76,8 +73,7 @@ exports.forgotPassword = async (req, res, next) => {
   const resetToken = user.getResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  // const resetPasswordUrl = `${req.protocol}://${req.get("host")}/password/reset/${resetToken}`;
-  const resetPasswordUrl = `${req.protocol}://localhost:5173/reset_Pwd/${resetToken}`;
+  const resetPasswordUrl = `${process.env.URL}/reset_Pwd/${resetToken}`;
   const message = `
   <html>
   <head>
@@ -105,7 +101,11 @@ exports.forgotPassword = async (req, res, next) => {
         margin-top: 20px;
       }
       .reset-link {
-        color: #007bff;
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
         text-decoration: none;
       }
     </style>
@@ -118,8 +118,8 @@ exports.forgotPassword = async (req, res, next) => {
       <p>Hello ${user.name},</p>
       <p>We received a request to reset your password for your Ecommerce account.</p>
       <p>If you did not make this request, you can ignore this email.</p>
-      <p>To reset your password, click the following link or copy and paste it into your browser</p>
-      <p><a href="${resetPasswordUrl}" class="reset-link" target="_blank">${resetPasswordUrl}</a></p>
+      <p>To reset your password, click the following button:</p>
+      <p><a href="${resetPasswordUrl}" class="reset-link" target="_blank">Reset Password</a></p>
       <p>This link will expire in 10 mins for security reasons.</p>
       <div class="footer">
         <p>Thank you,</p>
@@ -127,7 +127,7 @@ exports.forgotPassword = async (req, res, next) => {
       </div>
     </div>
   </body>
-</html>
+  </html>
   `;
 
   try {
@@ -135,7 +135,7 @@ exports.forgotPassword = async (req, res, next) => {
       email: user.email,
       subject: `Password Reset Request for Your Ecommerce Account`,
       message,
-      contentType: "text/html", // Set the content type to HTML
+      contentType: "text/html",
     });
 
     res.status(200).json({
