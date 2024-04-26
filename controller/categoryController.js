@@ -9,7 +9,7 @@ exports.createCategory = async (req, res, next) => {
 
     if (existingCategory) {
       return res
-        .status(400)
+        .status(200)
         .json({ success: false, error: "Category already exists" });
     }
 
