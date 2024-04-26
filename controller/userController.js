@@ -97,16 +97,22 @@ exports.forgotPassword = async (req, res, next) => {
         margin-bottom: 20px;
       }
       .footer {
-        text-align: center;
         margin-top: 20px;
       }
-      .reset-link {
+      .btn {
         display: inline-block;
-        background-color: #007bff;
+        background-color: #4CAF50;
         color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 14px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
         text-decoration: none;
+        text-align: center;
+      }
+      .btn:hover {
+        background-color: #45a049;
       }
     </style>
   </head>
@@ -119,7 +125,7 @@ exports.forgotPassword = async (req, res, next) => {
       <p>We received a request to reset your password for your Ecommerce account.</p>
       <p>If you did not make this request, you can ignore this email.</p>
       <p>To reset your password, click the following button:</p>
-      <p><a href="${resetPasswordUrl}" class="reset-link" target="_blank">Reset Password</a></p>
+      <p><a href="${resetPasswordUrl}" class="btn" target="_blank">Reset Password</a></p>
       <p>This link will expire in 10 mins for security reasons.</p>
       <div class="footer">
         <p>Thank you,</p>
@@ -127,7 +133,7 @@ exports.forgotPassword = async (req, res, next) => {
       </div>
     </div>
   </body>
-  </html>
+</html>
   `;
 
   try {
