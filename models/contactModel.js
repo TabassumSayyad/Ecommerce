@@ -10,22 +10,10 @@ const contactSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
-    validate(value) {
-      if (!validator.isEmail(value)) {
-        throw new Error("Invalid Email");
-      }
-    },
   },
   phone: {
     type: Number,
     required: true,
-    validate: {
-      validator: function (v) {
-        return /^[0-9]{10}$/.test(v);
-      },
-      message: "Mobile no. must contain 10 digits",
-    },
   },
   query: {
     type: String,

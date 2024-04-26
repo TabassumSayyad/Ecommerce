@@ -8,7 +8,7 @@ const {
 } = require("../controller/contactController");
 const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
-router.post("/contact", isAuthenticatedUser, createContact);
+router.post("/contact", createContact);
 router.get(
   "/contact",
   isAuthenticatedUser,
