@@ -64,6 +64,9 @@ const orderSchema = new mongoose.Schema({
         ref: "Product",
         required: true,
       },
+      issue:String,
+      isAccepted:Boolean,
+      exchangedAt:Date
     },
   ],
   user: {
@@ -119,6 +122,7 @@ const orderSchema = new mongoose.Schema({
     default: "Processing",
   },
   deliveredAt: Date,
+  exhangedTill:Date,
   createdAt: {
     type: Date,
     default: Date.now,
@@ -128,5 +132,6 @@ const orderSchema = new mongoose.Schema({
     default: false,
   },
 });
+
 
 module.exports = mongoose.model("Order", orderSchema);
