@@ -18,7 +18,6 @@ const orderSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-
     state: {
       type: String,
       required: true,
@@ -66,7 +65,8 @@ const orderSchema = new mongoose.Schema({
       },
       issue:String,
       isAccepted:Boolean,
-      exchangedAt:Date
+      exchangedAt:Date,
+      exchangeDelivered:Boolean
     },
   ],
   user: {

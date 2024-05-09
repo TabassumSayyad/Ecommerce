@@ -14,7 +14,7 @@ exports.newOrder = async (req, res, next) => {
     shippingPrice,
     totalPrice,
   } = req.body;
- 
+
   try {
     const orderData = {
       shippingInfo,
@@ -27,25 +27,25 @@ exports.newOrder = async (req, res, next) => {
       totalPrice,
       user: req.user._id,
     };
- 
+
     if (paymentInfo.mode === "COD") {
       orderData.paidAt = undefined; // If payment mode is COD, leave paidAt undefined
       paymentInfo.id = undefined;
     } else {
       orderData.paidAt = new Date(); // If payment mode is not COD, set paidAt to current date
     }
- 
+
     // Calculate delivery date (current date + 7 days)
     const deliveryDate = new Date();
     deliveryDate.setDate(deliveryDate.getDate() + 7);
     const deliveryDateString = deliveryDate.toLocaleDateString();
- 
+
     const order = await Order.create(orderData);
     // Update stock for each ordered item
     for (const item of orderItems) {
       await updateStock(item.product, item.quantity);
     }
- 
+
     // Send confirmation email to the user
     const confirmationMessage = `
       <html>
@@ -115,14 +115,14 @@ exports.newOrder = async (req, res, next) => {
         </body>
       </html>
     `;
- 
+
     await sendEmail({
       email: req.user.email,
       subject: "Order Confirmation",
       message: confirmationMessage,
       contentType: "text/html",
     });
- 
+
     res.status(201).json({
       success: true,
       order,
@@ -170,17 +170,34 @@ exports.getSingleOrder = async (req, res, next) => {
   }
 };
 
-//get All Orders(Admin)
+//get All Orders(Admin,Agent)
 exports.getAllOrders = async (req, res, next) => {
-  const orders = await Order.find({ isDeleted: false, 
-    deliveryStatus: { $ne: "Delivered" }}).sort({
-    createdAt: -1,
-  });
+  try {
+    let filter = {};
+    if (req.query.deliveryStatus) {
+      filter.deliveryStatus = req.query.deliveryStatus;
+    }
+    const orders = await Order.find({
+      ...filter,
+      orderItems: { $elemMatch: { issue: { $exists: false } } },
+    }).sort({
+      createdAt: -1,
+    });
 
-  res.status(200).json({
-    success: true,
-    orders,
-  });
+    // Filter out orderItems within orders where the 'issue' field is undefined
+    orders.forEach((order) => {
+      order.orderItems = order.orderItems.filter(
+        (item) => item.issue === undefined
+      );
+    });
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
 };
 
 //get deleted order(Admin)
@@ -566,8 +583,7 @@ exports.orderDelayNotification = async function () {
 };
 
 //check validity of exchange order
-exports.validateExchange = async (req,res,next)=>
-{
+exports.validateExchange = async (req, res, next) => {
   try {
     const { orderId } = req.params;
 
@@ -576,13 +592,15 @@ exports.validateExchange = async (req,res,next)=>
     if (!order) {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
-    const exchangeStillDate = new Date(order.exhangedTill); 
-    const currentDate = new Date(); 
+    const exchangeStillDate = new Date(order.exhangedTill);
+    const currentDate = new Date();
     // console.log(exchangeStillDate)
     // console.log(currentDate)
     // console.log(currentDate > exchangeStillDate)
     if (currentDate > exchangeStillDate) {
-      return res.status(200).json({ success: false, error: "Exchange period has expired" });
+      return res
+        .status(200)
+        .json({ success: false, error: "Exchange period has expired" });
     }
 
     res.status(200).json({ success: true });
@@ -590,7 +608,7 @@ exports.validateExchange = async (req,res,next)=>
     console.error(error);
     res.status(400).json({ success: false, error: error.message });
   }
-}
+};
 
 //Exchange Order
 exports.exchangeOrder = async (req, res, next) => {
@@ -611,10 +629,12 @@ exports.exchangeOrder = async (req, res, next) => {
         .status(404)
         .json({ success: false, error: "Product not found in order" });
     }
-    const exchangeStillDate = new Date(order.exhangedTill); 
-    const currentDate = new Date(); 
+    const exchangeStillDate = new Date(order.exhangedTill);
+    const currentDate = new Date();
     if (currentDate > exchangeStillDate) {
-      return res.status(200).json({ success: false, error: "Exchange period has expired" });
+      return res
+        .status(200)
+        .json({ success: false, error: "Exchange period has expired" });
     }
     orderItem.issue = issue;
     await order.save({ validateBeforeSave: false });
@@ -626,21 +646,26 @@ exports.exchangeOrder = async (req, res, next) => {
   }
 };
 
-//Accept Exchanged Order
-exports.acceptProductExchange = async (req, res, next) => {
+//Accept Exchanged Order Request(Admin)
+exports.acceptExchangeRequest = async (req, res, next) => {
   try {
     const { orderId, productId } = req.params;
-
-    const order = await Order.findById(orderId);
+    console.log(orderId);
+    console.log(productId);
+    const order = await Order.findById(orderId).populate("user", "name email");
 
     if (!order) {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    const orderItem = order.orderItems.find(item => item.product.toString() === productId);
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
 
     if (!orderItem) {
-      return res.status(404).json({ success: false, error: "Product not found in order" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found in order" });
     }
 
     let currentDate = new Date();
@@ -648,17 +673,227 @@ exports.acceptProductExchange = async (req, res, next) => {
     let fiveDaysLater = new Date(
       currentDate.getTime() + 5 * 24 * 60 * 60 * 1000
     );
+    const exchangeDateString = fiveDaysLater.toLocaleDateString();
     orderItem.exchangedAt = fiveDaysLater;
     await order.save();
-    res.status(200).json({ success: true, message: 'Product exchange accepted successfully',orderItem });
+    const message = `
+    <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Exchange Request </title>
+    <style>
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+          }
+     
+          .header {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+          }
+     
+          h2 {
+            margin: 0;
+          }
+     
+          .footer {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+          }
+     
+          .btn {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+          }
+        </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Exchange Request Accepted</h2>
+      </div>
+      <p>Dear ${order.user.name},</p>
+      <p>Your request for exchanging the product has been accepted.</p>
+      <p>Your order with ID: <strong>${orderId}</strong> and Product ID: <strong>${productId}</strong> will be picked up on ${exchangeDateString}.</p>
+      <p>We kindly request that you ensure the exchanged product is returned in its original condition.</p>
+      <p>Please ensure that the item is unused, with all original packaging, tags, and accessories included.</p>
+      <p>For more details regarding your order, please visit the 'My Orders' section on our website.</p>
+      <a href="${process.env.URL}/userOrders" target="_blank" class="btn">My Orders</a>
+      <p>We appreciate your patience and cooperation.</p>
+      <div class="footer">
+        <p>Best Regards,</p>
+        <p>kharido Yaar Team</p>
+      </div>
+    </div>
+  </body>
+</html>
+`;
+    await sendEmail({
+      email: order.user.email,
+      subject: "Product Exchange Request",
+      message: message,
+      contentType: "text/html",
+    });
+    res.status(200).json({
+      success: true,
+      message: "Product exchange accepted successfully",
+      orderItem,
+    });
   } catch (error) {
     console.error(error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
 
-//Reject Exchanged Order
-exports.rejectProductExchange = async (req, res, next) => {
+//Reject Exchanged Order Request(Admin)
+exports.rejectExchangeRequest = async (req, res, next) => {
+  try {
+    const { orderId, productId } = req.params;
+
+    const order = await Order.findById(orderId).populate("user", "name email");
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
+
+    if (!orderItem) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found in order" });
+    }
+
+    orderItem.isAccepted = false;
+    await order.save();
+    const message = `
+    <html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Exchange Request </title>
+    <style>
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+          }
+     
+          .header {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+          }
+     
+          h2 {
+            margin: 0;
+          }
+     
+          .footer {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+          }
+     
+          .btn {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+          }
+        </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Exchange Request Rejected</h2>
+      </div>
+      <p>Dear ${order.user.name},</p>
+      <p>Your request for exchanging the product has been rejected.</p>
+      <p>Your order with ID: <strong>${orderId}</strong> and Product ID: <strong>${productId}</strong>.</p>
+      <p>For more details regarding your order, please visit the 'My Orders' section on our website.</p>
+      <a href="${process.env.URL}/userOrders" target="_blank" class="btn">My Orders</a>
+      <p>We appreciate your patience and cooperation.</p>
+      <div class="footer">
+        <p>Best Regards,</p>
+        <p>kharido Yaar Team</p>
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
+    await sendEmail({
+      email: order.user.email,
+      subject: "Product Exchange Request",
+      message: message,
+      contentType: "text/html",
+    });
+    res.status(200).json({
+      success: true,
+      message: "Product exchange reject successfully",
+      orderItem,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+//get exchageRequest Orders(Admin,Agent)
+exports.getExchangeRequestOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.find({
+      orderItems: { $elemMatch: { issue: { $exists: true, $ne: null } } },
+    }).sort({
+      createdAt: -1,
+    });
+
+    // Filter out orderItems within orders where the 'issue' field doesn't exist
+    orders.forEach((order) => {
+      order.orderItems = order.orderItems.filter(
+        (item) => item.issue !== undefined
+      );
+    });
+
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};
+
+//Accept Exchanged Product(Agent)
+exports.acceptExchangedProduct = async (req, res, next) => {
   try {
     const { orderId, productId } = req.params;
 
@@ -668,31 +903,76 @@ exports.rejectProductExchange = async (req, res, next) => {
       return res.status(404).json({ success: false, error: "Order not found" });
     }
 
-    const orderItem = order.orderItems.find(item => item.product.toString() === productId);
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
 
     if (!orderItem) {
-      return res.status(404).json({ success: false, error: "Product not found in order" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found in order" });
     }
-
-    orderItem.isAccepted = false;
+    orderItem.exchangeDelivered = true;
     await order.save();
-
-    res.status(200).json({ success: true, message: 'Product exchange reject successfully',orderItem });
+    res.status(200).json({
+      success: true,
+      message: "Product exchanged successfully",
+      orderItem,
+    });
   } catch (error) {
     console.error(error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
 
-//get Delivered Orders
-exports.getDeliveredOrders= async(req,res,next)=>{
-  const orders = await Order.find({ isDeleted: false, 
-    deliveryStatus:  "Delivered" }).sort({
-    createdAt: -1,
-  });
+// Reject Exchanged Product(Agent)
+exports.rejectExchangedProduct = async (req, res, next) => {
+  try {
+    const { orderId, productId } = req.params;
 
-  res.status(200).json({
-    success: true,
-    orders,
-  });
-}
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
+
+    if (!orderItem) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found in order" });
+    }
+    orderItem.exchangeDelivered = false;
+    await order.save();
+    res.status(200).json({
+      success: true,
+      message: "Product exchanged Rejected",
+      orderItem,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+exports.filterDeliveryStatus = async (req, res, next) => {
+  try {
+    let filter = {};
+    if (req.query.deliveryStatus) {
+      filter.deliveryStatus = req.query.deliveryStatus;
+    }
+    const orders = await Order.find(filter);
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
