@@ -66,7 +66,6 @@ const orderSchema = new mongoose.Schema({
       issue:String,
       isAccepted:Boolean,
       exchangedAt:Date,
-      exchangeDelivered:Boolean
     },
   ],
   user: {
