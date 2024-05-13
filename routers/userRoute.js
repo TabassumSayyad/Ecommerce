@@ -12,6 +12,7 @@ const {
   resetPassword,
   updateProfile,
   logout,
+  getAddresses,
 } = require("../controller/userController");
 const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
@@ -22,6 +23,7 @@ router.post("/password/forgot", forgotPassword);
 router.patch("/password/reset/:token", resetPassword);
 router.get("/me", isAuthenticatedUser, getuserDetails);
 router.put("/me/update", isAuthenticatedUser, updateProfile);
+router.get("/me/address",isAuthenticatedUser,getAddresses)
 
 //admin
 router.get(

@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const sendEmail = require("../utils/sendEmail");
+const paginate = require("../utils/pagination");
 const crypto = require("crypto");
 //Register User
 exports.registerUser = async (req, res, next) => {
@@ -237,9 +238,24 @@ exports.updateProfile = async (req, res, next) => {
 //get All User Details(Admin)
 exports.getAllUsers = async (req, res, next) => {
   try {
-    console.log("token ", req.cookies);
-    const usersData = await User.find();
-    res.status(201).json({ success: true, usersData });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+
+    const usersData = await User.find().limit(limit).skip(startIndex);
+    const count = await User.countDocuments();
+    const totalPages = Math.ceil(count / limit);
+    const pagination = paginate(startIndex, limit, count, page);
+    res
+      .status(201)
+      .json({
+        success: true,
+        totalPages: totalPages,
+        currentPage: page,
+        totalUsers: count,
+        pagination,
+        usersData: usersData,
+      });
   } catch (e) {
     res.status(400).json({ success: false, e });
   }
@@ -268,5 +284,19 @@ exports.deleteUser = async (req, res, next) => {
     return res.json({ success: true, deletedUser });
   } catch (error) {
     return res.json({ success: false, error });
+  }
+};
+
+//get the addresses of the user
+exports.getAddresses = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+    const addresses = user.address.sort((a, b) => b.createdAt - a.createdAt); // Sort addresses by createdAt in descending order
+    return res.status(200).json({ success: true, addresses });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
   }
 };
