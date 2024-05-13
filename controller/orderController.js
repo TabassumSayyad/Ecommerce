@@ -1,5 +1,7 @@
 const Order = require("../models/orderModel");
 const Product = require("../models/productModel");
+const User = require("../models/userModel");
+const paginate = require("../utils/pagination");
 const sendEmail = require("../utils/sendEmail");
 
 //create new Order
@@ -16,6 +18,43 @@ exports.newOrder = async (req, res, next) => {
   } = req.body;
 
   try {
+    // Check if the address already exists for the user
+    const user = await User.findById(req.user._id);
+    const existingAddress = user.address.find((addr) => {
+      return (
+        addr.houseNo === shippingInfo.houseNo &&
+        addr.appartmentName === shippingInfo.appartmentName &&
+        addr.landmark === shippingInfo.landmark &&
+        addr.city === shippingInfo.city &&
+        addr.state === shippingInfo.state &&
+        addr.country === shippingInfo.country &&
+        addr.pinCode === shippingInfo.pinCode &&
+        addr.phone === shippingInfo.phone &&
+        addr.alternatePhone === shippingInfo.alternatePhone
+      );
+    });
+    let updatedAddress;
+    if (existingAddress) {
+      // If the address already exists, use the existing one
+      updatedAddress = existingAddress;
+      updatedAddress.createdAt = new Date();// Update createdAt for the existing address
+      updatedAddress.addressType =shippingInfo.addressType
+    } else {
+      // If the address doesn't exist, check if the user has less than 3 addresses
+      if (user.address.length < 3) {
+        updatedAddress = { ...shippingInfo };
+        updatedAddress.createdAt = new Date(); // Set createdAt for the new address
+        user.address.push(updatedAddress);
+      } else {
+        // If the user already has 3 addresses, remove the oldest address and add the new one
+        user.address.sort((a, b) => a.createdAt - b.createdAt); // Sort addresses by createdAt in ascending order
+        user.address.shift(); // Remove the oldest address
+        updatedAddress = { ...shippingInfo };
+        updatedAddress.createdAt = new Date(); // Set createdAt for the new address
+        user.address.push(updatedAddress);
+      }
+    }
+    await user.save();
     const orderData = {
       shippingInfo,
       orderItems,
@@ -137,14 +176,31 @@ exports.newOrder = async (req, res, next) => {
 
 //get my orders(logged in users)
 exports.myOrders = async (req, res, next) => {
-  const orders = await Order.find({ user: req.user._id }).sort({
-    createdAt: -1,
-  });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const startIndex = (page - 1) * limit;
 
-  res.status(200).json({
-    success: true,
-    orders,
-  });
+  try {
+    const orders = await Order.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(startIndex);
+    const count = await Order.countDocuments({ user: req.user._id });
+    const totalPages = Math.ceil(count / limit);
+    const pagination = paginate(startIndex, limit, count, page);
+
+    res.status(200).json({
+      success: true,
+      totalPages: totalPages,
+      currentPage: page,
+      totalOrders: count,
+      pagination,
+      orders: orders,
+    });
+  } catch (error) {
+    // Handle errors
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 //get single order
@@ -177,12 +233,24 @@ exports.getAllOrders = async (req, res, next) => {
     if (req.query.deliveryStatus) {
       filter.deliveryStatus = req.query.deliveryStatus;
     }
-    const orders = await Order.find({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+
+    const ordersPromise = Order.find({
       ...filter,
       orderItems: { $elemMatch: { issue: { $exists: false } } },
-    }).sort({
-      createdAt: -1,
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(startIndex);
+
+    const count = await Order.countDocuments({
+      ...filter,
+      orderItems: { $elemMatch: { issue: { $exists: false } } },
     });
+    const totalPages = Math.ceil(count / limit);
+    const orders = await ordersPromise;
 
     // Filter out orderItems within orders where the 'issue' field is undefined
     orders.forEach((order) => {
@@ -190,9 +258,17 @@ exports.getAllOrders = async (req, res, next) => {
         (item) => item.issue === undefined
       );
     });
+
+    // Generate pagination object using paginate function
+    const pagination = paginate(startIndex, limit, count, page);
+
     res.status(200).json({
       success: true,
-      orders,
+      totalPages: totalPages,
+      currentPage: page,
+      totalOrders: count,
+      pagination,
+      orders: orders,
     });
   } catch (error) {
     console.error(error);
@@ -616,7 +692,7 @@ exports.exchangeOrder = async (req, res, next) => {
     const { issue } = req.body;
     const { orderId, productId } = req.params;
 
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).populate("user", "name email");
 
     if (!order) {
       return res.status(404).json({ success: false, error: "Order not found" });
@@ -637,45 +713,11 @@ exports.exchangeOrder = async (req, res, next) => {
         .json({ success: false, error: "Exchange period has expired" });
     }
     orderItem.issue = issue;
-    await order.save({ validateBeforeSave: false });
-
-    res.status(200).json({ success: true, order });
-  } catch (error) {
-    console.error(error);
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-//Accept Exchanged Order Request(Admin)
-exports.acceptExchangeRequest = async (req, res, next) => {
-  try {
-    const { orderId, productId } = req.params;
-    console.log(orderId);
-    console.log(productId);
-    const order = await Order.findById(orderId).populate("user", "name email");
-
-    if (!order) {
-      return res.status(404).json({ success: false, error: "Order not found" });
-    }
-
-    const orderItem = order.orderItems.find(
-      (item) => item.product.toString() === productId
-    );
-
-    if (!orderItem) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Product not found in order" });
-    }
-
-    let currentDate = new Date();
-    orderItem.isAccepted = true;
     let fiveDaysLater = new Date(
       currentDate.getTime() + 5 * 24 * 60 * 60 * 1000
     );
     const exchangeDateString = fiveDaysLater.toLocaleDateString();
     orderItem.exchangedAt = fiveDaysLater;
-    await order.save();
     const message = `
     <html>
   <head>
@@ -749,6 +791,38 @@ exports.acceptExchangeRequest = async (req, res, next) => {
       message: message,
       contentType: "text/html",
     });
+    await order.save({ validateBeforeSave: false });
+
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+//Accept Exchanged Product(Agent)
+exports.acceptExchangedProduct = async (req, res, next) => {
+  try {
+    const { orderId, productId } = req.params;
+    console.log(orderId);
+    console.log(productId);
+    const order = await Order.findById(orderId).populate("user", "name email");
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    const orderItem = order.orderItems.find(
+      (item) => item.product.toString() === productId
+    );
+    // console.log(orderItem.quantity)
+    if (!orderItem) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found in order" });
+    }
+    orderItem.isAccepted = true;
+    await order.save();
     res.status(200).json({
       success: true,
       message: "Product exchange accepted successfully",
@@ -760,8 +834,8 @@ exports.acceptExchangeRequest = async (req, res, next) => {
   }
 };
 
-//Reject Exchanged Order Request(Admin)
-exports.rejectExchangeRequest = async (req, res, next) => {
+// Reject Exchanged Product(Agent)
+exports.rejectExchangedProduct = async (req, res, next) => {
   try {
     const { orderId, productId } = req.params;
 
@@ -869,11 +943,22 @@ exports.rejectExchangeRequest = async (req, res, next) => {
 //get exchageRequest Orders(Admin,Agent)
 exports.getExchangeRequestOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+
+    const ordersPromise = Order.find({
       orderItems: { $elemMatch: { issue: { $exists: true, $ne: null } } },
-    }).sort({
-      createdAt: -1,
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(startIndex);
+
+    const count = await Order.countDocuments({
+      orderItems: { $elemMatch: { issue: { $exists: true, $ne: null } } },
     });
+    const totalPages = Math.ceil(count / limit);
+    const orders = await ordersPromise;
 
     // Filter out orderItems within orders where the 'issue' field doesn't exist
     orders.forEach((order) => {
@@ -882,97 +967,19 @@ exports.getExchangeRequestOrders = async (req, res, next) => {
       );
     });
 
+    // Generate pagination object using paginate function
+    const pagination = paginate(startIndex, limit, count, page);
+
     res.status(200).json({
       success: true,
-      orders,
+      totalPages: totalPages,
+      currentPage: page,
+      totalOrders: count,
+      pagination,
+      orders: orders,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: "Server Error" });
-  }
-};
-
-//Accept Exchanged Product(Agent)
-exports.acceptExchangedProduct = async (req, res, next) => {
-  try {
-    const { orderId, productId } = req.params;
-
-    const order = await Order.findById(orderId);
-
-    if (!order) {
-      return res.status(404).json({ success: false, error: "Order not found" });
-    }
-
-    const orderItem = order.orderItems.find(
-      (item) => item.product.toString() === productId
-    );
-
-    if (!orderItem) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Product not found in order" });
-    }
-    orderItem.exchangeDelivered = true;
-    await order.save();
-    res.status(200).json({
-      success: true,
-      message: "Product exchanged successfully",
-      orderItem,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-// Reject Exchanged Product(Agent)
-exports.rejectExchangedProduct = async (req, res, next) => {
-  try {
-    const { orderId, productId } = req.params;
-
-    const order = await Order.findById(orderId);
-
-    if (!order) {
-      return res.status(404).json({ success: false, error: "Order not found" });
-    }
-
-    const orderItem = order.orderItems.find(
-      (item) => item.product.toString() === productId
-    );
-
-    if (!orderItem) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Product not found in order" });
-    }
-    orderItem.exchangeDelivered = false;
-    await order.save();
-    res.status(200).json({
-      success: true,
-      message: "Product exchanged Rejected",
-      orderItem,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-exports.filterDeliveryStatus = async (req, res, next) => {
-  try {
-    let filter = {};
-    if (req.query.deliveryStatus) {
-      filter.deliveryStatus = req.query.deliveryStatus;
-    }
-    const orders = await Order.find(filter);
-    res.status(200).json({
-      success: true,
-      orders,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
   }
 };

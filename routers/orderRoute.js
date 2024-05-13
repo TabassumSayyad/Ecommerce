@@ -12,11 +12,8 @@ const {
   getExchangeRequestOrders,
   exchangeOrder,
   validateExchange,
-  acceptExchangeRequest,
-  rejectExchangeRequest,
   acceptExchangedProduct,
   rejectExchangedProduct,
-  filterDeliveryStatus,
 } = require("../controller/orderController");
 const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
@@ -44,13 +41,6 @@ router.get(
 );
 
 router.get(
-  "/admin/filter/orders",
-  isAuthenticatedUser,
-  authorizeRoles("admin","agent"),
-  filterDeliveryStatus
-);
-
-router.get(
   "/admin/exchangeRequest/orders",
   isAuthenticatedUser,
   authorizeRoles("admin", "agent"),
@@ -71,18 +61,6 @@ router.delete(
   deleteOrder
 );
 
-router.put(
-  "/order/accept/:orderId/:productId",
-  isAuthenticatedUser,
-  authorizeRoles("admin"),
-  acceptExchangeRequest
-);
-router.put(
-  "/order/reject/:orderId/:productId",
-  isAuthenticatedUser,
-  authorizeRoles("admin"),
-  rejectExchangeRequest
-);
 
 //Delivery Agent
 router.put(
@@ -91,16 +69,20 @@ router.put(
   authorizeRoles("agent"),
   updateOrder
 );
+
 router.put(
-  "/order/accept/product/:orderId/:productId",
+  "/order/accept/:orderId/:productId",
   isAuthenticatedUser,
   authorizeRoles("agent"),
   acceptExchangedProduct
 );
+
 router.put(
-  "/order/reject/product/:orderId/:productId",
+  "/order/reject/:orderId/:productId",
   isAuthenticatedUser,
   authorizeRoles("agent"),
   rejectExchangedProduct
 );
+
+
 module.exports = router;
