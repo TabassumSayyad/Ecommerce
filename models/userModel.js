@@ -48,6 +48,41 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  address:[{
+    addressType:{
+      type: String,
+    },
+      houseNo: {
+        type: String,
+      },
+      appartmentName: {
+        type: String,
+      },
+      landmark: {
+        type: String,
+      },
+      city: {
+        type: String,
+      },
+      state: {
+        type: String,
+      },
+      country: {
+        type: String,
+      },
+      pinCode: {
+        type: Number,
+      },
+      phone: {
+        type: Number,
+      },
+      alternatePhone: {
+        type: Number,
+      },
+      createdAt:{
+        type:Date
+      }
+    }]
 });
 
 userSchema.pre("save", async function () {
