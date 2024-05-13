@@ -1,14 +1,16 @@
 const Product = require("../models/productModel");
 const Category = require("../models/categoryModel");
+const paginate = require("../utils/pagination");
 const fs = require("fs");
 const path = require("path");
 
 //add the product
 exports.addProduct = async (req, res) => {
-  const { title, description, category, subCategory, price, quantity } =
-    req.body;
+  let { title, description, category, subCategory, price, quantity } = req.body;
 
   try {
+    // Replace multiple spaces with a single space
+    title = title.replace(/\s+/g, " ").trim();
     const filenames = req.files.map((file) => file.path);
     // Check if the category exists
     let existingCategory = await Category.findOne({ category });
@@ -18,6 +20,18 @@ exports.addProduct = async (req, res) => {
       existingCategory.subcategories.push(subCategory);
       await existingCategory.save();
     }
+
+    // Check if a product with the same title (case insensitive) already exists
+    const existingProduct = await Product.findOne({
+      title: { $regex: new RegExp("^" + title + "$", "i") },
+    });
+    if (existingProduct) {
+      return res.status(200).json({
+        success: false,
+        error: "Product with the same title already exists.",
+      });
+    }
+
     const product = new Product({
       title,
       description,
@@ -126,20 +140,69 @@ exports.getproductDetails = async (req, res) => {
 //get All Products(Admin)
 exports.getAdminProducts = async (req, res) => {
   try {
-    const productsData = await Product.find({ isDeleted: false });
-    res.status(201).json({ success: true, productsData });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+    let query = { isDeleted: false };
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      query.title = searchRegex ;
+    }
+    console.log(query);
+    const totalProducts = await Product.countDocuments(query);
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    const productsData = await Product.find(query)
+      .limit(limit)
+      .skip(startIndex);
+
+   const pagination=paginate(startIndex,limit,totalProducts,page)
+
+   res.status(200).json({
+    success: true,
+    totalPages: totalPages,
+    currentPage: page,
+    totalProducts: totalProducts,
+    pagination: pagination,
+    productsData: productsData,
+  });
   } catch (e) {
-    res.status(400).json({ success: false, e });
+    res.status(400).json({ success: false, error: e.message });
   }
 };
 
 //get Deleted Products(Admin)
 exports.getDeletedProducts = async (req, res) => {
   try {
-    const productsData = await Product.find({ isDeleted: true });
-    res.status(201).json({ success: true, productsData });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+    let query = { isDeleted: true };
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      query.title = searchRegex ;
+    }
+    console.log(query);
+    const totalProducts = await Product.countDocuments(query);
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    const productsData = await Product.find(query)
+      .limit(limit)
+      .skip(startIndex);
+
+   const pagination=paginate(startIndex,limit,totalProducts,page)
+
+   res.status(200).json({
+    success: true,
+    totalPages: totalPages,
+    currentPage: page,
+    totalProducts: totalProducts,
+    pagination: pagination,
+    productsData: productsData,
+  });
   } catch (e) {
-    res.status(400).json({ success: false, e });
+    res.status(400).json({ success: false, error: e.message });
   }
 };
 
