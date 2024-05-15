@@ -29,28 +29,30 @@ exports.newOrder = async (req, res, next) => {
         addr.state === shippingInfo.state &&
         addr.country === shippingInfo.country &&
         addr.pinCode === shippingInfo.pinCode &&
-        addr.phone === shippingInfo.phone &&
-        addr.alternatePhone === shippingInfo.alternatePhone
+        addr.phone === shippingInfo.phone 
       );
     });
     let updatedAddress;
     if (existingAddress) {
       // If the address already exists, use the existing one
       updatedAddress = existingAddress;
-      updatedAddress.createdAt = new Date();// Update createdAt for the existing address
-      updatedAddress.addressType =shippingInfo.addressType
+      updatedAddress.updatedAt = new Date();// Update updatedAt for the existing address
+      updatedAddress.addressType =shippingInfo.addressType;
+      updatedAddress.alternatePhone =shippingInfo.alternatePhone
     } else {
       // If the address doesn't exist, check if the user has less than 3 addresses
       if (user.address.length < 3) {
         updatedAddress = { ...shippingInfo };
         updatedAddress.createdAt = new Date(); // Set createdAt for the new address
+        updatedAddress.updatedAt = new Date(); 
         user.address.push(updatedAddress);
       } else {
         // If the user already has 3 addresses, remove the oldest address and add the new one
-        user.address.sort((a, b) => a.createdAt - b.createdAt); // Sort addresses by createdAt in ascending order
+        user.address.sort((a, b) => a.updatedAt - b.updatedAt); // Sort addresses by createdAt in ascending order
         user.address.shift(); // Remove the oldest address
         updatedAddress = { ...shippingInfo };
         updatedAddress.createdAt = new Date(); // Set createdAt for the new address
+        updatedAddress.updatedAt = new Date(); 
         user.address.push(updatedAddress);
       }
     }

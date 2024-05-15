@@ -294,7 +294,7 @@ exports.getAddresses = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
-    const addresses = user.address.sort((a, b) => b.createdAt - a.createdAt); // Sort addresses by createdAt in descending order
+    const addresses = user.address.sort((a, b) => b.updatedAt - a.updatedAt); // Sort addresses by createdAt in descending order
     return res.status(200).json({ success: true, addresses });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
