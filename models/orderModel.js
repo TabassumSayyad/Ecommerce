@@ -37,7 +37,6 @@ const orderSchema = new mongoose.Schema({
     },
     alternatePhone: {
       type: Number,
-      required: true,
     },
   },
   orderItems: [
