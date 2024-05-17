@@ -179,7 +179,7 @@ exports.newOrder = async (req, res, next) => {
 //get my orders(logged in users)
 exports.myOrders = async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 5;
   const startIndex = (page - 1) * limit;
 
   try {
@@ -236,7 +236,7 @@ exports.getAllOrders = async (req, res, next) => {
       filter.deliveryStatus = req.query.deliveryStatus;
     }
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 5;
     const startIndex = (page - 1) * limit;
 
     const ordersPromise = Order.find({
@@ -946,7 +946,7 @@ exports.rejectExchangedProduct = async (req, res, next) => {
 exports.getExchangeRequestOrders = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 5;
     const startIndex = (page - 1) * limit;
 
     const ordersPromise = Order.find({
